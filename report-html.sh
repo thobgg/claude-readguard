@@ -148,12 +148,13 @@ $FOLDER_ROWS
 </div>
 
 <h2>Ausgeführte Bash-Befehle</h2>
-<p class="note">Die letzten $MAX_BASH, neueste zuerst, gekürzt. Bash wird nur protokolliert, nicht blockiert – welche Dateien ein Befehl wirklich liest, steht nicht im Kommandotext.</p>
-<div class="card">
+<p class="note">Achtung, blinder Fleck: Bei Bash sieht der Hook nur den Befehlstext – welche Dateien ein Befehl wirklich liest, steht dort nicht. Zum Nachschauen aufklappen.</p>
+<details>
+<summary>Die letzten $MAX_BASH Befehle anzeigen</summary>
 <table><thead><tr><th>Zeit</th><th>Befehl</th></tr></thead><tbody>
 $BASH_ROWS
 </tbody></table>
-</div>
+</details>
 
 <h2>Alle Zugriffe nach Tag</h2>
 $DAY_HTML
