@@ -43,8 +43,13 @@ fi
 mkdir -p "$HOME/.local/bin"
 ln -sf "$SRC_DIR/report.sh" "$HOME/.local/bin/readguard-report"
 ln -sf "$SRC_DIR/report-html.sh" "$HOME/.local/bin/readguard-html"
-chmod +x "$SRC_DIR/report.sh" "$SRC_DIR/report-html.sh"
-echo "Befehle angelegt: readguard-report (Text) und readguard-html (Browser)"
+ln -sf "$SRC_DIR/claude-audit.sh" "$HOME/.local/bin/claude-audit"
+ln -sf "$SRC_DIR/audit-report.sh" "$HOME/.local/bin/readguard-audit"
+chmod +x "$SRC_DIR/report.sh" "$SRC_DIR/report-html.sh" \
+         "$SRC_DIR/claude-audit.sh" "$SRC_DIR/audit-report.sh"
+echo "Befehle angelegt: readguard-report, readguard-html, claude-audit, readguard-audit"
+command -v strace >/dev/null 2>&1 \
+    || echo "Hinweis: Für claude-audit fehlt noch strace:  sudo apt install strace"
 
 mkdir -p "$HOME/.local/share/applications"
 cat > "$HOME/.local/share/applications/claude-readguard.desktop" <<EOF

@@ -69,6 +69,27 @@ Fokus liegt auf den Dateizugriffen.
 Näherung – bei parallelen Sitzungen stimmt sie nicht zuverlässig. Passt das
 History-Format nicht, fällt das Skript auf die reine Zugriffsliste zurück.
 
+## Lückenlose Aufzeichnung: `claude-audit`
+
+Der Hook hat prinzipbedingt eine Lücke: Bei Bash-Befehlen sieht er nur den
+Kommandotext, nicht die Dateien, die der Befehl wirklich öffnet. Wer es
+lückenlos will, startet Claude Code so:
+
+```
+claude-audit
+```
+
+Das startet Claude Code unter `strace` – das Betriebssystem zeichnet dann
+**jede** Dateiöffnung von Claude Code und allen Unterprozessen auf, auch
+innerhalb von Bash-Befehlen. Nach dem Beenden der Sitzung erscheint
+automatisch die Auswertung: alle geöffneten Dateien, sortiert nach innerhalb
+und ausserhalb des Projektordners, System-Rauschen herausgefiltert. Später
+erneut anzeigen: `readguard-audit`. Benötigt `strace`
+(`sudo apt install strace`); die Sitzung läuft dadurch etwas langsamer.
+
+Diese Liste kommt vom Betriebssystem, nicht von Claude selbst – sie ist
+unabhängig von jeder Selbstauskunft.
+
 ## Was es nicht leistet
 
 Ehrlichkeit vor Marketing – dieses Tool hat klare Grenzen:
@@ -76,11 +97,11 @@ Ehrlichkeit vor Marketing – dieses Tool hat klare Grenzen:
 - **Geöffnet ist nicht übertragen.** Das Log zeigt, welche Dateien geöffnet
   wurden, nicht, welche Inhalte tatsächlich an die Anthropic-Server gesendet
   wurden.
-- **Bash-Befehle sind eine Lücke.** Bei `Bash` steht im Hook nur der
+- **Der Hook allein hat eine Bash-Lücke.** Bei `Bash` steht im Hook nur der
   Kommandotext, nicht die Dateien, die der Befehl dann wirklich liest. Ein
   `cat ~/.ssh/id_rsa` innerhalb eines Bash-Befehls wird protokolliert, aber
-  nicht blockiert – und verschachtelte oder verschleierte Lesezugriffe sind
-  im Kommandotext nicht sicher erkennbar.
+  nicht blockiert. Diese Lücke schliesst erst `claude-audit` (siehe oben) –
+  allerdings nur aufzeichnend, nicht blockierend.
 - **Keine Sandbox.** Ein Hook ist eine Konvention, keine Durchsetzung. Echte
   Grenzen liegen auf Betriebssystemebene (eigene Benutzerkonten, Container,
   Dateirechte, AppArmor/SELinux).
