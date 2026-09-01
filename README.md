@@ -8,6 +8,11 @@ Gedacht für alle, die nicht den Code prüfen wollen, sondern das Verhalten:
 Was liest Claude Code von sich aus, ohne dass ich es ausdrücklich angewiesen
 habe?
 
+Der Clou: Wer es lückenlos will, startet die Sitzung mit **`claude-audit`**
+statt `claude` – dann protokolliert das **Betriebssystem** jede einzelne
+Dateiöffnung, auch innerhalb von Bash-Befehlen. Keine Selbstauskunft der KI,
+sondern unabhängige Messung ([Details](#lückenlose-aufzeichnung-claude-audit)).
+
 ![HTML-Bericht von claude-readguard (Demo-Daten)](screenshot.png)
 
 *Der HTML-Bericht (`readguard-html`) – Screenshot mit Demo-Daten.*
