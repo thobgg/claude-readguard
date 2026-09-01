@@ -39,6 +39,28 @@ else
     echo "allowlist existiert bereits, bleibt unverändert."
 fi
 
+# Berichts-Befehle und Startmenü-Eintrag anlegen.
+mkdir -p "$HOME/.local/bin"
+ln -sf "$SRC_DIR/report.sh" "$HOME/.local/bin/readguard-report"
+ln -sf "$SRC_DIR/report-html.sh" "$HOME/.local/bin/readguard-html"
+chmod +x "$SRC_DIR/report.sh" "$SRC_DIR/report-html.sh"
+echo "Befehle angelegt: readguard-report (Text) und readguard-html (Browser)"
+
+mkdir -p "$HOME/.local/share/applications"
+cat > "$HOME/.local/share/applications/claude-readguard.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Readguard Bericht
+GenericName=Claude-Code-Zugriffsbericht
+Comment=Zeigt, welche Dateien Claude Code gelesen hat
+Exec=$HOME/.local/bin/readguard-html
+Icon=security-high
+Terminal=false
+Categories=Utility;Security;Monitor;
+EOF
+update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
+echo "Startmenü-Eintrag angelegt: Readguard Bericht"
+
 # settings.json vorbereiten und sichern.
 mkdir -p "$(dirname "$SETTINGS")"
 if [ ! -f "$SETTINGS" ]; then

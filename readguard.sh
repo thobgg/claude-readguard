@@ -20,7 +20,7 @@ fi
 
 TOOL=$(printf '%s' "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null)
 CWD=$(printf '%s' "$INPUT" | jq -r '.cwd // empty' 2>/dev/null)
-TARGET=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // .tool_input.path // .tool_input.notebook_path // .tool_input.command // empty' 2>/dev/null)
+TARGET=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // .tool_input.path // .tool_input.notebook_path // .tool_input.command // empty' 2>/dev/null | tr '\n\t' '  ')
 
 # Kein Zielpfad ermittelbar (z. B. Glob ohne path-Angabe): durchlassen.
 [ -z "$TARGET" ] && exit 0

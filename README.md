@@ -44,12 +44,21 @@ Hook greift.
 
 ## Auswertung
 
+Zwei Wege, gleicher Inhalt:
+
 ```
-bash report.sh
+readguard-report        # Textbericht im Terminal
+readguard-html          # HTML-Bericht im Browser (rein lokal, kein Server)
 ```
 
-Zeigt zuerst alle `[AUSSERHALB]`-Treffer, danach die eigenen Prompts aus
-`~/.claude/history.jsonl` mit den zeitlich darauf folgenden Zugriffen.
+Der HTML-Bericht wird nach `~/.claude-readguard/report.html` geschrieben und
+über `file://` im Standardbrowser geöffnet – es läuft kein Server, nichts
+verlässt den Rechner. Zusätzlich legt `install.sh` einen Startmenü-Eintrag
+**„Readguard Bericht"** an, der den Bericht per Klick neu erzeugt und öffnet.
+
+Beide Berichte zeigen zuerst alle `[AUSSERHALB]`-Treffer, danach die eigenen
+Prompts aus `~/.claude/history.jsonl` mit den zeitlich darauf folgenden
+Zugriffen.
 **Achtung:** Diese Zuordnung erfolgt nur über Zeitstempel und ist eine
 Näherung – bei parallelen Sitzungen stimmt sie nicht zuverlässig. Passt das
 History-Format nicht, fällt das Skript auf die reine Zugriffsliste zurück.
