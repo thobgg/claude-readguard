@@ -8,6 +8,10 @@ Gedacht für alle, die nicht den Code prüfen wollen, sondern das Verhalten:
 Was liest Claude Code von sich aus, ohne dass ich es ausdrücklich angewiesen
 habe?
 
+![HTML-Bericht von claude-readguard (Demo-Daten)](screenshot.png)
+
+*Der HTML-Bericht (`readguard-html`) – Screenshot mit Demo-Daten.*
+
 ## Funktionsweise
 
 Der Hook (`~/.claude-readguard/readguard.sh`) wird vor jedem Aufruf der Tools
