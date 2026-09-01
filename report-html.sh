@@ -81,7 +81,10 @@ if [ "${#PROMPT_TS[@]}" -gt 0 ]; then
         [ "$count" -eq 0 ] && continue
         if [ "$count" -eq 1 ]; then einheit="Zugriff"; else einheit="Zugriffe"; fi
         ptime=$(date -d "@$wstart" '+%d.%m.%Y %H:%M')
-        ptext=$(printf '%s' "${PROMPT_TXT[$i]}" | cut -c1-300 | esc)
+        # Prompts nur als kurze Kontext-Beschriftung – der Fokus liegt auf den Zugriffen.
+        ptext="${PROMPT_TXT[$i]}"
+        if [ "${#ptext}" -gt 100 ]; then ptext="${ptext:0:100}…"; fi
+        ptext=$(printf '%s' "$ptext" | esc)
         TIMELINE+="<details><summary><span class=\"ptime\">$ptime</span> $ptext <span class=\"count\">$count $einheit</span></summary>
 <table><thead><tr><th>Zeit</th><th>Tool</th><th>Pfad</th></tr></thead><tbody>
 $rows</tbody></table></details>
@@ -157,7 +160,7 @@ $OUTSIDE_ROWS
 </div>
 
 <h2>Prompts und nachfolgende Zugriffe</h2>
-<p class="note">Neueste zuerst, aufklappbar, maximal $MAX_PROMPTS Prompts. Die Zuordnung erfolgt nur über Zeitstempel und ist eine <strong>Näherung</strong> – parallele Sitzungen verfälschen sie.</p>
+<p class="note">Neueste zuerst, aufklappbar, maximal $MAX_PROMPTS Prompts. Prompts werden gekürzt und nur zur Orientierung angezeigt – der Fokus liegt auf den Zugriffen. Die Zuordnung erfolgt nur über Zeitstempel und ist eine <strong>Näherung</strong> – parallele Sitzungen verfälschen sie.</p>
 $TIMELINE
 
 <div class="warnbox"><strong>Datenschutz:</strong> Diese Datei enthält echte Pfad- und Projektnamen und ggf. komplette Bash-Kommandozeilen. Nicht weitergeben, nicht in ein Repository legen.</div>

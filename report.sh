@@ -68,7 +68,9 @@ printf '%s\n' "$PROMPTS" | {
     prev_text=""
     ausgeben() {
         [ -z "$prev_ts" ] && return
-        echo ">> $(date -d "@$prev_ts" '+%Y-%m-%d %H:%M:%S') PROMPT: $prev_text"
+        kurz="$prev_text"
+        if [ "${#kurz}" -gt 100 ]; then kurz="${kurz:0:100}…"; fi
+        echo ">> $(date -d "@$prev_ts" '+%Y-%m-%d %H:%M:%S') PROMPT: $kurz"
         printf '%s\n' "$LOGLINES" | while IFS=$'\t' read -r epoch line; do
             [ -z "$epoch" ] && continue
             if [ "$epoch" -ge "$prev_ts" ] && { [ -z "$1" ] || [ "$epoch" -lt "$1" ]; }; then
