@@ -1,99 +1,80 @@
 #!/usr/bin/env bash
 # claude-readguard – HTML-Bericht
-# Erzeugt aus reads.log und history.jsonl eine lokale HTML-Datei
-# (~/.claude-readguard/report.html) und öffnet sie im Browser.
-# Rein lokal über file:// – es läuft kein Server, es verlässt nichts den Rechner.
+# Erzeugt aus reads.log eine lokale HTML-Datei (~/.claude-readguard/report.html)
+# und öffnet sie im Browser. Rein lokal über file:// – kein Server, nichts
+# verlässt den Rechner. Bewusst ohne Chat-Inhalte: Prompts erscheinen nirgends.
 # Aufruf: report-html.sh [--no-open]
 
 LOG="$HOME/.claude-readguard/reads.log"
-HIST="$HOME/.claude/history.jsonl"
 OUT="$HOME/.claude-readguard/report.html"
-MAX_PROMPTS=30
+MAX_BASH=30
 
 esc() { sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'; }
 
+TMPD=$(mktemp -d)
+trap 'rm -rf "$TMPD"' EXIT
+
 STAND=$(date '+%d.%m.%Y %H:%M')
 
+# Nur Zeilen mit Zeitstempel auswerten (mehrzeilige Altlasten ignorieren).
+if [ -f "$LOG" ]; then
+    grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9:]{8} ' "$LOG" > "$TMPD/lines" || true
+else
+    : > "$TMPD/lines"
+fi
+grep -vF -e '[AUSSERHALB]' -e '[FEHLER]' "$TMPD/lines" > "$TMPD/acc" || true
+
 # --- Kennzahlen -------------------------------------------------------------
-TOTAL=0; OUTSIDE=0; FIRST="–"; LAST="–"
-if [ -f "$LOG" ]; then
-    TOTAL=$(grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2} ' "$LOG" 2>/dev/null | grep -cv -e '\[AUSSERHALB\]' -e '\[FEHLER\]' || echo 0)
-    OUTSIDE=$(grep -cF '[AUSSERHALB]' "$LOG" 2>/dev/null || echo 0)
-    FIRST=$(grep -E -m1 '^[0-9]{4}-[0-9]{2}-[0-9]{2} ' "$LOG" | cut -c1-16)
-    LAST=$(grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2} ' "$LOG" | tail -n1 | cut -c1-16)
-fi
+TOTAL=$(wc -l < "$TMPD/acc")
+OUTSIDE=$(grep -cF '[AUSSERHALB]' "$TMPD/lines" || true)
+FIRST=$(head -n1 "$TMPD/lines" | cut -c1-16); FIRST=${FIRST:-–}
+LAST=$(tail -n1 "$TMPD/lines" | cut -c1-16);  LAST=${LAST:-–}
 
-# --- Tabelle der AUSSERHALB-Zugriffe ---------------------------------------
-OUTSIDE_ROWS=""
-if [ -f "$LOG" ]; then
-    OUTSIDE_ROWS=$(grep -F '[AUSSERHALB]' "$LOG" | tac | while IFS= read -r line; do
-        ts="${line:0:19}"
-        tool=$(printf '%s' "$line" | sed -n 's/.*\[AUSSERHALB\] \[\([^]]*\)\].*/\1/p')
-        path=$(printf '%s' "$line" | sed 's/.*\[AUSSERHALB\] \[[^]]*\] //' | esc)
-        printf '<tr><td class="time">%s</td><td><span class="tool">%s</span></td><td class="path">%s</td></tr>\n' \
-            "$ts" "$tool" "$path"
+# --- Zugriffe ausserhalb des Projektordners --------------------------------
+OUTSIDE_ROWS=$(grep -F '[AUSSERHALB]' "$TMPD/lines" | tac | while IFS= read -r line; do
+    ts="${line:0:16}"
+    tool=$(printf '%s' "$line" | sed -n 's/.*\[AUSSERHALB\] \[\([^]]*\)\].*/\1/p')
+    path=$(printf '%s' "$line" | sed 's/.*\[AUSSERHALB\] \[[^]]*\] //' | esc)
+    printf '<tr><td class="time">%s</td><td><span class="tool">%s</span></td><td class="path">%s</td></tr>\n' \
+        "$ts" "$tool" "$path"
+done)
+[ -z "$OUTSIDE_ROWS" ] && OUTSIDE_ROWS='<tr><td colspan="3" class="empty">Keine – alles blieb im Projektordner oder auf der Allowlist.</td></tr>'
+
+# --- Ordner-Übersicht (ohne Bash-Kommandos) --------------------------------
+FOLDER_ROWS=$(grep -v ' \[Bash\] ' "$TMPD/acc" \
+    | sed 's/^.\{20\}\[[^]]*\] //' \
+    | awk -F/ 'NF>4{print "/"$2"/"$3"/"$4"/…"; next}{print}' \
+    | sort | uniq -c | sort -rn | head -12 \
+    | while read -r n p; do
+        printf '<tr><td class="path">%s</td><td class="num2">%s</td></tr>\n' "$(printf '%s' "$p" | esc)" "$n"
     done)
-fi
-if [ -z "$OUTSIDE_ROWS" ]; then
-    OUTSIDE_ROWS='<tr><td colspan="3" class="empty">Keine – alles blieb im Projektordner oder auf der Allowlist.</td></tr>'
-fi
+[ -z "$FOLDER_ROWS" ] && FOLDER_ROWS='<tr><td colspan="2" class="empty">Noch keine Zugriffe.</td></tr>'
 
-# --- Zugriffe einlesen (ohne AUSSERHALB-Duplikate und Fehlerzeilen) ---------
-ACC_EPOCH=(); ACC_HTML=()
-if [ -f "$LOG" ]; then
-    while IFS= read -r line; do
-        stamp="${line:0:19}"
-        epoch=$(date -d "$stamp" '+%s' 2>/dev/null) || continue
-        tool=$(printf '%s' "$line" | sed -n 's/^[0-9: -]\{19\} \[\([^]]*\)\].*/\1/p')
-        path=$(printf '%s' "$line" | sed 's/^[0-9: -]\{19\} \[[^]]*\] //' | esc)
-        ACC_EPOCH+=("$epoch")
-        ACC_HTML+=("<tr><td class=\"time\">${stamp:11:5}</td><td><span class=\"tool\">$tool</span></td><td class=\"path\">$path</td></tr>")
-    done < <(grep -v -e '\[AUSSERHALB\]' -e '\[FEHLER\]' "$LOG")
-fi
+# --- Ausgeführte Bash-Befehle ----------------------------------------------
+BASH_ROWS=$(grep ' \[Bash\] ' "$TMPD/acc" | tail -n "$MAX_BASH" | tac | while IFS= read -r line; do
+    ts="${line:0:16}"
+    cmd=$(printf '%s' "$line" | sed 's/^.\{20\}\[Bash\] //' | cut -c1-160 | esc)
+    printf '<tr><td class="time">%s</td><td class="path">%s</td></tr>\n' "$ts" "$cmd"
+done)
+[ -z "$BASH_ROWS" ] && BASH_ROWS='<tr><td colspan="2" class="empty">Keine.</td></tr>'
 
-# --- Prompts einlesen und Zeitfenster bilden --------------------------------
-TIMELINE=""
-PROMPT_TS=(); PROMPT_TXT=()
-if command -v jq >/dev/null 2>&1 && [ -f "$HIST" ]; then
-    while IFS=$'\t' read -r ts txt; do
-        [ -z "$ts" ] && continue
-        PROMPT_TS+=("$ts"); PROMPT_TXT+=("$txt")
-    done < <(jq -r 'select(type == "object" and .timestamp != null and .display != null)
-                    | "\(.timestamp / 1000 | floor)\t\(.display | gsub("[\\n\\t]"; " "))"' \
-             "$HIST" 2>/dev/null | sort -n)
-fi
-
-if [ "${#PROMPT_TS[@]}" -gt 0 ]; then
-    n=${#PROMPT_TS[@]}
-    start=$(( n > MAX_PROMPTS ? n - MAX_PROMPTS : 0 ))
-    for (( i = n - 1; i >= start; i-- )); do
-        wstart=${PROMPT_TS[$i]}
-        if [ "$i" -lt $(( n - 1 )) ]; then wend=${PROMPT_TS[$((i+1))]}; else wend=""; fi
-        rows=""
-        count=0
-        for (( j = 0; j < ${#ACC_EPOCH[@]}; j++ )); do
-            e=${ACC_EPOCH[$j]}
-            if [ "$e" -ge "$wstart" ] && { [ -z "$wend" ] || [ "$e" -lt "$wend" ]; }; then
-                rows+="${ACC_HTML[$j]}"$'\n'
-                count=$((count+1))
-            fi
-        done
-        [ "$count" -eq 0 ] && continue
-        if [ "$count" -eq 1 ]; then einheit="Zugriff"; else einheit="Zugriffe"; fi
-        ptime=$(date -d "@$wstart" '+%d.%m.%Y %H:%M')
-        # Prompts nur als kurze Kontext-Beschriftung – der Fokus liegt auf den Zugriffen.
-        ptext="${PROMPT_TXT[$i]}"
-        if [ "${#ptext}" -gt 100 ]; then ptext="${ptext:0:100}…"; fi
-        ptext=$(printf '%s' "$ptext" | esc)
-        TIMELINE+="<details><summary><span class=\"ptime\">$ptime</span> $ptext <span class=\"count\">$count $einheit</span></summary>
+# --- Alle Zugriffe nach Tag -------------------------------------------------
+DAY_HTML=""
+for day in $(cut -c1-10 "$TMPD/acc" | sort -ur); do
+    rows=$(grep "^$day " "$TMPD/acc" | while IFS= read -r line; do
+        t="${line:11:5}"
+        tool=$(printf '%s' "$line" | sed -n 's/^.\{20\}\[\([^]]*\)\].*/\1/p')
+        path=$(printf '%s' "$line" | sed 's/^.\{20\}\[[^]]*\] //' | cut -c1-200 | esc)
+        printf '<tr><td class="time">%s</td><td><span class="tool">%s</span></td><td class="path">%s</td></tr>\n' \
+            "$t" "$tool" "$path"
+    done)
+    n=$(grep -c "^$day " "$TMPD/acc")
+    DAY_HTML+="<details><summary>$day <span class=\"count\">$n Zugriffe</span></summary>
 <table><thead><tr><th>Zeit</th><th>Tool</th><th>Pfad</th></tr></thead><tbody>
 $rows</tbody></table></details>
 "
-    done
-fi
-if [ -z "$TIMELINE" ]; then
-    TIMELINE='<p class="empty">Keine zuordenbaren Prompts gefunden (History fehlt, Format unbekannt oder noch keine Zugriffe in den Zeitfenstern).</p>'
-fi
+done
+[ -z "$DAY_HTML" ] && DAY_HTML='<p class="empty">Noch keine Zugriffe protokolliert.</p>'
 
 # --- HTML schreiben ---------------------------------------------------------
 cat > "$OUT" <<HTML
@@ -130,11 +111,11 @@ tr:last-child td{border-bottom:0}
 .time{white-space:nowrap;color:var(--ink2);font-variant-numeric:tabular-nums}
 .tool{background:var(--chip);border-radius:6px;padding:1px 8px;font-size:.8rem}
 .path{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.82rem;word-break:break-all}
+.num2{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .empty{color:var(--ink2);padding:14px}
 details{background:var(--surface);border:1px solid var(--line);border-radius:10px;margin-bottom:10px;overflow-x:auto}
 summary{cursor:pointer;padding:12px 16px;list-style-position:inside}
 summary:hover{color:var(--accent)}
-.ptime{color:var(--ink2);font-variant-numeric:tabular-nums;margin-right:6px}
 .count{color:var(--ink2);font-size:.82rem;white-space:nowrap}
 .warnbox{background:var(--warn-bg);color:var(--warn-ink);border-radius:10px;padding:12px 16px;font-size:.88rem;margin-top:8px}
 .note{color:var(--ink2);font-size:.85rem;margin-top:6px}
@@ -143,7 +124,7 @@ summary:hover{color:var(--accent)}
 <body>
 <main>
 <h1>claude-readguard – Bericht</h1>
-<p class="sub">Stand: $STAND · rein lokale Datei, kein Server, nichts verlässt diesen Rechner</p>
+<p class="sub">Stand: $STAND · rein lokale Datei, kein Server · ohne Chat-Inhalte</p>
 
 <div class="tiles">
   <div class="tile"><div class="num">$TOTAL</div><div class="lbl">protokollierte Zugriffe</div></div>
@@ -159,11 +140,25 @@ $OUTSIDE_ROWS
 </tbody></table>
 </div>
 
-<h2>Prompts und nachfolgende Zugriffe</h2>
-<p class="note">Neueste zuerst, aufklappbar, maximal $MAX_PROMPTS Prompts. Prompts werden gekürzt und nur zur Orientierung angezeigt – der Fokus liegt auf den Zugriffen. Die Zuordnung erfolgt nur über Zeitstempel und ist eine <strong>Näherung</strong> – parallele Sitzungen verfälschen sie.</p>
-$TIMELINE
+<h2>Wo wurde gelesen? (Ordner-Übersicht)</h2>
+<div class="card">
+<table><thead><tr><th>Ordner</th><th class="num2">Zugriffe</th></tr></thead><tbody>
+$FOLDER_ROWS
+</tbody></table>
+</div>
 
-<div class="warnbox"><strong>Datenschutz:</strong> Diese Datei enthält echte Pfad- und Projektnamen und ggf. komplette Bash-Kommandozeilen. Nicht weitergeben, nicht in ein Repository legen.</div>
+<h2>Ausgeführte Bash-Befehle</h2>
+<p class="note">Die letzten $MAX_BASH, neueste zuerst, gekürzt. Bash wird nur protokolliert, nicht blockiert – welche Dateien ein Befehl wirklich liest, steht nicht im Kommandotext.</p>
+<div class="card">
+<table><thead><tr><th>Zeit</th><th>Befehl</th></tr></thead><tbody>
+$BASH_ROWS
+</tbody></table>
+</div>
+
+<h2>Alle Zugriffe nach Tag</h2>
+$DAY_HTML
+
+<div class="warnbox"><strong>Datenschutz:</strong> Diese Datei enthält echte Pfad- und Projektnamen und gekürzte Bash-Kommandozeilen. Nicht weitergeben, nicht in ein Repository legen.</div>
 </main>
 </body>
 </html>

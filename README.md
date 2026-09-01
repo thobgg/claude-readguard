@@ -60,9 +60,11 @@ Der HTML-Bericht wird nach `~/.claude-readguard/report.html` geschrieben und
 verlässt den Rechner. Zusätzlich legt `install.sh` einen Startmenü-Eintrag
 **„Readguard Bericht"** an, der den Bericht per Klick neu erzeugt und öffnet.
 
-Beide Berichte zeigen zuerst alle `[AUSSERHALB]`-Treffer, danach die eigenen
-Prompts aus `~/.claude/history.jsonl` mit den zeitlich darauf folgenden
-Zugriffen.
+Beide Berichte zeigen zuerst alle `[AUSSERHALB]`-Treffer, danach eine
+Ordner-Übersicht (wo wurde wie oft gelesen), die zuletzt ausgeführten
+Bash-Befehle und die vollständige Zugriffsliste. **Bewusst ohne
+Chat-Inhalte:** Die eigenen Prompts erscheinen nirgends im Bericht – der
+Fokus liegt auf den Dateizugriffen.
 **Achtung:** Diese Zuordnung erfolgt nur über Zeitstempel und ist eine
 Näherung – bei parallelen Sitzungen stimmt sie nicht zuverlässig. Passt das
 History-Format nicht, fällt das Skript auf die reine Zugriffsliste zurück.
