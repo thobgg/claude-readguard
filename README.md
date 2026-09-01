@@ -79,6 +79,9 @@ lückenlos will, startet Claude Code so:
 claude-audit
 ```
 
+Alle gewohnten Argumente funktionieren weiter und werden unverändert
+durchgereicht, z. B. `claude-audit --resume` oder `claude-audit --continue`.
+
 Das startet Claude Code unter `strace` – das Betriebssystem zeichnet dann
 **jede** Dateiöffnung von Claude Code und allen Unterprozessen auf, auch
 innerhalb von Bash-Befehlen. Nach dem Beenden der Sitzung erscheint
