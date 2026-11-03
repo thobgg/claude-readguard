@@ -80,8 +80,8 @@ readguard-html          # HTML-Bericht im Browser (rein lokal, kein Server)
 
 Der HTML-Bericht wird nach `~/.claude-readguard/report.html` geschrieben und
 über `file://` im Standardbrowser geöffnet – es läuft kein Server, nichts
-verlässt den Rechner. Zusätzlich legt `install.sh` einen Startmenü-Eintrag
-**„Readguard Bericht"** an, der den Bericht per Klick neu erzeugt und öffnet.
+verlässt den Rechner. Der Startmenü-Eintrag **„Readguard"** öffnet die Fenster-App (siehe unten),
+aus der sich der HTML-Bericht ebenfalls erzeugen lässt.
 
 Beide Berichte zeigen zuerst alle `[AUSSERHALB]`-Treffer, danach eine
 Ordner-Übersicht (wo wurde wie oft gelesen), die zuletzt ausgeführten
@@ -91,6 +91,33 @@ Fokus liegt auf den Dateizugriffen.
 **Achtung:** Diese Zuordnung erfolgt nur über Zeitstempel und ist eine
 Näherung – bei parallelen Sitzungen stimmt sie nicht zuverlässig. Passt das
 History-Format nicht, fällt das Skript auf die reine Zugriffsliste zurück.
+
+## Fenster-App
+
+```
+readguard-app           # oder im Startmenü: „Readguard“
+```
+
+Ein kleines Fenster mit denselben Inhalten wie der Bericht, dazu ein
+Zeitraumfilter (heute, 7 Tage, 30 Tage, alles), ein Reiter für gesperrte
+Aufrufe und Knöpfe für die Allowlist und die Sperrliste (Änderungen gelten
+sofort), den HTML-Bericht und **„Log kürzen“**: Ältere Zeilen wandern gepackt
+nach `~/.claude-readguard/reads-bis-DATUM.log.gz`, das Log bleibt handlich.
+Doppelklick auf eine Zeile zeigt den vollen Eintrag. Braucht nur Python 3
+mit Tkinter (`sudo apt install python3-tk`), sonst nichts.
+
+### Windows (experimentell)
+
+Die App läuft unter Windows mit dem normalen Python von python.org;
+`install.ps1` legt eine Startmenü-Verknüpfung „Readguard“ an:
+
+```
+powershell -ExecutionPolicy Bypass -File install.ps1
+```
+
+Der Hook selbst ist ein Bash-Skript und braucht unter Windows Git Bash und
+`jq`; `install.sh` ist dort in Git Bash auszuführen. Das ist bislang nicht auf
+einem Windows-Rechner geprüft. Ohne laufenden Hook zeigt die App ein leeres Log.
 
 ## Lückenlose Aufzeichnung: `claude-audit`
 
@@ -130,7 +157,10 @@ Ehrlichkeit vor Marketing – dieses Tool hat klare Grenzen:
   allerdings nur aufzeichnend, nicht blockierend.
 - **Keine Sandbox.** Ein Hook ist eine Konvention, keine Durchsetzung. Echte
   Grenzen liegen auf Betriebssystemebene (eigene Benutzerkonten, Container,
-  Dateirechte, AppArmor/SELinux).
+  Dateirechte, AppArmor/SELinux). Ein kleiner Schritt in diese Richtung:
+  `sudo chattr +i ~/.claude-readguard/*.sh` macht die installierten Hooks
+  unveränderbar, auch für Claude Code selbst; `install.sh` überspringt solche
+  Dateien dann.
 - **Die Serverseite bleibt unberührt.** Was mit übertragenen Daten bei
   Anthropic passiert, kann ein lokales Tool weder sehen noch beeinflussen.
 

@@ -19,10 +19,20 @@ if ! command -v jq >/dev/null 2>&1; then
 fi
 
 mkdir -p "$TARGET_DIR"
-cp "$SRC_DIR/readguard.sh" "$HOOK"
-cp "$SRC_DIR/sperrliste-hook.sh" "$SPERRHOOK"
-chmod +x "$HOOK" "$SPERRHOOK"
-echo "Hooks installiert: $HOOK, $SPERRHOOK"
+# Hooks kopieren. Schreibgeschützte Ziele (chattr +i) mit gleichem Inhalt
+# werden übersprungen; bei abweichendem Inhalt folgt ein Hinweis.
+hook_kopieren() {  # hook_kopieren QUELLE ZIEL
+    if [ -f "$2" ] && cmp -s "$1" "$2"; then
+        echo "Unverändert: $2"
+    elif cp "$1" "$2" 2>/dev/null && chmod +x "$2" 2>/dev/null; then
+        echo "Hook installiert: $2"
+    else
+        echo "ACHTUNG: $2 konnte nicht ersetzt werden (schreibgeschützt?)."
+        echo "         Schutz aufheben mit:  sudo chattr -i $2   und erneut installieren."
+    fi
+}
+hook_kopieren "$SRC_DIR/readguard.sh" "$HOOK"
+hook_kopieren "$SRC_DIR/sperrliste-hook.sh" "$SPERRHOOK"
 
 # Beispiel-allowlist nur anlegen, wenn noch keine existiert.
 if [ ! -f "$TARGET_DIR/allowlist" ]; then
@@ -55,9 +65,12 @@ ln -sf "$SRC_DIR/report.sh" "$HOME/.local/bin/readguard-report"
 ln -sf "$SRC_DIR/report-html.sh" "$HOME/.local/bin/readguard-html"
 ln -sf "$SRC_DIR/claude-audit.sh" "$HOME/.local/bin/claude-audit"
 ln -sf "$SRC_DIR/audit-report.sh" "$HOME/.local/bin/readguard-audit"
+ln -sf "$SRC_DIR/readguard-app.py" "$HOME/.local/bin/readguard-app"
 chmod +x "$SRC_DIR/report.sh" "$SRC_DIR/report-html.sh" \
-         "$SRC_DIR/claude-audit.sh" "$SRC_DIR/audit-report.sh"
-echo "Befehle angelegt: readguard-report, readguard-html, claude-audit, readguard-audit"
+         "$SRC_DIR/claude-audit.sh" "$SRC_DIR/audit-report.sh" "$SRC_DIR/readguard-app.py"
+echo "Befehle angelegt: readguard-app, readguard-report, readguard-html, claude-audit, readguard-audit"
+python3 -c 'import tkinter' 2>/dev/null \
+    || echo "Hinweis: Für die Fenster-App fehlt noch Tkinter:  sudo apt install python3-tk"
 command -v strace >/dev/null 2>&1 \
     || echo "Hinweis: Für claude-audit fehlt noch strace:  sudo apt install strace"
 
@@ -65,16 +78,16 @@ mkdir -p "$HOME/.local/share/applications"
 cat > "$HOME/.local/share/applications/claude-readguard.desktop" <<EOF
 [Desktop Entry]
 Type=Application
-Name=Readguard Bericht
+Name=Readguard
 GenericName=Claude-Code-Zugriffsbericht
 Comment=Zeigt, welche Dateien Claude Code gelesen hat
-Exec=$HOME/.local/bin/readguard-html
+Exec=python3 $SRC_DIR/readguard-app.py
 Icon=security-high
 Terminal=false
 Categories=Utility;Security;Monitor;
 EOF
 update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
-echo "Startmenü-Eintrag angelegt: Readguard Bericht"
+echo "Startmenü-Eintrag angelegt: Readguard"
 
 # settings.json vorbereiten und sichern.
 mkdir -p "$(dirname "$SETTINGS")"
