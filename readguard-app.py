@@ -144,7 +144,7 @@ class App(tk.Tk):
         namen = [s[0] for s in spalten]
         tv = ttk.Treeview(rahmen, columns=namen, show="headings", selectmode="browse")
         for name, breite in spalten:
-            tv.heading(name, text=name)
+            tv.heading(name, text=name, command=lambda t=tv, n=name: self.sortieren(t, n))
             tv.column(name, width=breite, anchor="e" if name == "Zugriffe" else "w",
                       stretch=(breite >= 700))
         sb = ttk.Scrollbar(rahmen, orient="vertical", command=tv.yview)
@@ -200,12 +200,36 @@ class App(tk.Tk):
     def fuellen(self, key, zeilen):
         tv = self.tabellen[key]
         tv.delete(*tv.get_children())
+        tv._sortiert = None
+        for sp in tv["columns"]:
+            tv.heading(sp, text=sp)
         for z in zeilen[:MAX_ZEILEN]:
             tv.insert("", "end", values=[str(v)[:300] for v in z])
         if len(zeilen) > MAX_ZEILEN:
             tv.insert("", "end", values=["…", f"{len(zeilen) - MAX_ZEILEN} weitere Zeilen, Zeitraum einschränken"])
         if not zeilen:
             tv.insert("", "end", values=["(keine)"])
+
+    def sortieren(self, tv, spalte):
+        """Klick auf eine Überschrift sortiert die Spalte, ein zweiter Klick
+        kehrt die Richtung um. Pfade alphabetisch, Zahlen numerisch."""
+        umgekehrt = getattr(tv, "_sortiert", None) == (spalte, False)
+        zeilen = [(tv.set(k, spalte), k) for k in tv.get_children("")]
+
+        def schluessel(paar):
+            w = paar[0]
+            try:
+                return (0, int(w))
+            except ValueError:
+                return (1, w.lower())
+
+        zeilen.sort(key=schluessel, reverse=umgekehrt)
+        for i, (_, k) in enumerate(zeilen):
+            tv.move(k, "", i)
+        tv._sortiert = (spalte, umgekehrt)
+        for sp in tv["columns"]:
+            text = sp + (" ▼" if umgekehrt else " ▲") if sp == spalte else sp
+            tv.heading(sp, text=text)
 
     def details(self, tv):
         auswahl = tv.selection()
