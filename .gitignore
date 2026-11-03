@@ -1,0 +1,9 @@
+# Enthält echte Pfade und Kommandozeilen – nie einchecken.
+reads.log
+report.html
+audit/
+# Persönliche Listen bleiben lokal.
+allowlist
+sperrliste
+# Backups des Installers.
+*.bak.*

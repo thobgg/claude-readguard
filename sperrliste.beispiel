@@ -1,0 +1,10 @@
+# claude-readguard sperrliste
+# Ein regulärer Ausdruck (grep -E, Gross/Klein egal) je Zeile, # = Kommentar.
+# Jede Werkzeugeingabe von Claude Code (Pfade UND Bash-Kommandos), die auf
+# eine Zeile passt, wird verweigert – ausgewertet von sperrliste-hook.sh.
+# Neue Zeile = sofort wirksam, kein Neustart nötig.
+#
+# Beispiele:
+# /home/ich/Photos
+# ~/Steuer
+# (/mnt/NAS|/volume1)[^[:space:]"'`]*/Familienarchiv
